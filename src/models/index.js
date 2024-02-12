@@ -1,5 +1,5 @@
 const User = require("./User");
-const EmailCode = require("./emailCode");
+const EmailCode = require("./EmailCode");
 
 //en el modelo se genera userId
 EmailCode.belongsTo(User);
