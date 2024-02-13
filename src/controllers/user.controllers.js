@@ -111,10 +111,75 @@ const login = catchError(async(req, res) => {
      return res.json({user, token});
 });
 
-    const logged = catchError(async(req, res) => {
+const logged = catchError(async(req, res) => {
         const user = req.user
         return res.json(user)
-    })
+});
+
+const requestPassword = catchError(async(req, res) => {
+    //Encontrar email o retornar un 401
+    const { email, frontBaseUrl } = req.body;
+    const account = await User.findOne({where:{email}});
+    if(!account) return res.status(401).json({error: 'User not Found'});
+
+     //Generar codigo 
+    const code = require('crypto').randomBytes(64).toString('hex');
+
+    // almacenar el code en EmailCode
+    await EmailCode.create({
+        code: code,
+        userId: account.id
+    });
+
+    //Enviar email
+    /**
+    
+    sendEmail({
+        to:email, 
+        subject:"Account Verification", 
+        html: 
+     */
+
+    sendEmail({
+        to: email,
+        subject: "Reset Password",
+        html: 
+        `
+        <div style="max-width: 500px; margin: 50px auto; background-color: #f8fafc; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); font-family: 'Arial', sans-serif; color: #333333;">
+      
+        <h1 style="color: #007BFF; font-size: 28px; text-align: center; margin-bottom: 20px;">¡Hola ${account.firstName.toUpperCase()} 👋!</h1>    
+        
+        <p style="font-size: 18px; line-height: 1.6; margin-bottom: 25px; text-align: center;">Hemos recibido una solicitud de cambio de contraseña! Por favor haga clic en el siguiente enlace:</p>
+
+        <div style="text-align: center;">
+            <a href=${frontBaseUrl}/reset_password/${code} style="display: inline-block; background-color: #007BFF; color: #ffffff; text-align: center; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 18px;">Reset Password</a>
+        </div>
+        
+        
+      </div>
+      `
+    })    
+    return res.json(account)
+});
+
+const resetPassword = catchError(async(req, res) => {
+    const {code} = req.params;
+    const { password } = req.body;
+    const hashedPassword = await bycript.hash(password, 10)
+    const userCode = await EmailCode.findOne({where: {code}})
+    if(!userCode) return res.sendStatus(401)
+
+    const user = await User.findByPk(userCode.userId)
+    user.update(
+        {password: hashedPassword }
+    );
+
+
+
+    await userCode.destroy();
+    return res.json(user);
+
+});
 
 module.exports = {
     getAll,
@@ -124,5 +189,7 @@ module.exports = {
     update,
     verifyUser,
     login,
-    logged
+    logged,
+    requestPassword,
+    resetPassword
 }
